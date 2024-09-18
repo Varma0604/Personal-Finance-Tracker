@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Finance Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #e9ecef;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #343a40;
+            margin-bottom: 10px;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #495057;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            border-color: #80bdff;
+            outline: none;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .expense-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .expense-item {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 5px;
+        }
+        .chart-container {
+            width: 100%;
+            height: 300px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        #chart {
+            width: 100%;
+            height: 100%;
+        }
+        .edit-btn, .delete-btn {
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: #007bff;
+            transition: color 0.3s;
+        }
+        .edit-btn:hover, .delete-btn:hover {
+            color: #0056b3;
+        }
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Personal Finance Tracker</h1>
+        
+        <div class="card">
+            <h2>Add Expense</h2>
+            <form id="expense-form">
+                <div class="form-group">
+                    <label for="category">Category:</label>
+                    <input type="text" id="category" name="category" required>
+                </div>
+                <div class="form-group">
+                    <label for="amount">Amount:</label>
+                    <input type="number" id="amount" name="amount" required>
+                </div>
+                <button type="submit">Add Expense</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Budget Overview</h2>
+            <p>Total Budget: $<span id="total-budget">1000.00</span></p>
+            <p>Total Expenses: $<span id="total-expenses">0.00</span></p>
+            <p><strong>Remaining: $<span id="remaining-budget">1000.00</span></strong></p>
+        </div>
+
+        <div class="card">
+            <h2>Expense Breakdown</h2>
+            <div class="chart-container">
+                <canvas id="chart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Recent Expenses</h2>
+            <ul id="expense-list" class="expense-list">
+                <!-- Expenses will be added here dynamically -->
+            </ul>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2024 Personal Finance Tracker
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let totalBudget = 1000;
+        let expenses = [];
+        let chart;
+
+        // DOM elements
+        const expenseForm = document.getElementById('expense-form');
+        const categoryInput = document.getElementById('category');
+        const amountInput = document.getElementById('amount');
+        const totalExpensesElement = document.getElementById('total-expenses');
+        const remainingBudgetElement = document.getElementById('remaining-budget');
+        const expenseList = document.getElementById('expense-list');
+        const chartCanvas = document.getElementById('chart');
+
+        expenseForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const category = categoryInput.value.trim();
+            const amount = parseFloat(amountInput.value);
+            
+            if (category && amount) {
+                expenses.push({ category, amount });
+                updateBudgetOverview();
+                updateExpenseList();
+                updateChart();
+                categoryInput.value = '';
+                amountInput.value = '';
+            }
+        });
+
+        function updateBudgetOverview() {
+            const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+            const remainingBudget = totalBudget - totalExpenses;
+            
+            totalExpensesElement.textContent = totalExpenses.toFixed(2);
+            remainingBudgetElement.textContent = remainingBudget.toFixed(2);
+        }
+
+        function updateExpenseList() {
+            expenseList.innerHTML = '';
+            expenses.slice(-5).reverse().forEach((expense, index) => {
+                const li = document.createElement('li');
+                li.className = 'expense-item';
+                li.innerHTML = `
+                    <span>${expense.category}</span> <span>$${expense.amount.toFixed(2)}</span>
+                    <button class="edit-btn" onclick="editExpense(${index})">✎</button>
+                    <button class="delete-btn" onclick="deleteExpense(${index})">🗑️</button>
+                `;
+                expenseList.appendChild(li);
+            });
+        }
+
+        function updateChart() {
+            const categories = {};
+            expenses.forEach(expense => {
+                if (categories[expense.category]) {
+                    categories[expense.category] += expense.amount;
+                } else {
+                    categories[expense.category] = expense.amount;
+                }
+            });
+
+            const data = {
+                labels: Object.keys(categories),
+                datasets: [{
+                    data: Object.values(categories),
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
+                    ]
+                }]
+            };
+
+            if (chart) {
+                chart.data = data;
+                chart.update();
+            } else {
+                chart = new Chart(chartCanvas, {
+                    type: 'pie',
+                    data: data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+        }
+
+        function editExpense(index) {
+            const expense = expenses[index];
+            categoryInput.value = expense.category;
+            amountInput.value = expense.amount;
+            deleteExpense(index); // Remove the expense after editing
+        }
+
+        function deleteExpense(index) {
+            expenses.splice(index, 1);
+            updateBudgetOverview();
+            updateExpenseList();
+            updateChart();
+        }
+
+        updateChart();
+    </script>
+</body>
+</html>
